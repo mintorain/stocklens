@@ -1,7 +1,5 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
@@ -13,34 +11,27 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getIndices: () => request<{ data: any[]; meta: any }>('/api/v1/indices'),
+  getIndices: () =>
+    request<{ data: any[]; meta: any }>('/api/indices'),
 
   searchStocks: (q: string, market = 'ALL') =>
-    request<{ data: any[]; meta: any }>(`/api/v1/stocks/search?q=${encodeURIComponent(q)}&market=${market}`),
+    request<{ data: any[]; meta: any }>(`/api/stocks?action=search&q=${encodeURIComponent(q)}&market=${market}`),
 
   getStock: (ticker: string, market = 'KR') =>
-    request<{ data: any }>(`/api/v1/stocks/${ticker}?market=${market}`),
+    request<{ data: any }>(`/api/stocks?ticker=${ticker}&market=${market}`),
 
   getPriceHistory: (ticker: string, market = 'KR', period = '1m') =>
-    request<{ data: any }>(`/api/v1/stocks/${ticker}/price?market=${market}&period=${period}`),
+    request<{ data: any }>(`/api/stocks?action=price&ticker=${ticker}&market=${market}&period=${period}`),
 
-  getNewsAnalysis: (ticker: string, market = 'KR') =>
-    request<{ data: any }>(`/api/v1/stocks/${ticker}/news?market=${market}`),
-
-  getPortfolio: () => request<{ data: any[]; meta: any }>('/api/v1/portfolio'),
-
-  addToPortfolio: (body: { ticker: string; exchange: string; market: string; group_name?: string }) =>
-    request<{ data: any }>('/api/v1/portfolio', { method: 'POST', body: JSON.stringify(body) }),
-
-  removeFromPortfolio: (ticker: string) =>
-    request<void>(`/api/v1/portfolio/${ticker}`, { method: 'DELETE' }),
-
-  updateGroup: (ticker: string, groupName: string) =>
-    request<{ data: any }>(`/api/v1/portfolio/${ticker}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ group_name: groupName }),
-    }),
+  getNewsAnalysis: (ticker: string, market = 'KR', name?: string) =>
+    request<{ data: any }>(`/api/news?ticker=${ticker}&market=${market}&name=${encodeURIComponent(name ?? ticker)}`),
 
   getMarketSummary: () =>
-    request<{ summary: string; date: string }>('/api/v1/market/summary'),
+    request<{ summary: string; date: string }>('/api/market'),
+
+  // 포트폴리오는 클라이언트(Zustand persist)에서 관리 — 서버 불필요
+  getPortfolio: () => Promise.resolve({ data: [], meta: { total: 0 } }),
+  addToPortfolio: () => Promise.resolve({ data: {} }),
+  removeFromPortfolio: () => Promise.resolve(undefined as any),
+  updateGroup: () => Promise.resolve({ data: {} }),
 }

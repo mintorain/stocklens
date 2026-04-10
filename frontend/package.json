@@ -16,7 +16,10 @@
     "@tanstack/react-query": "^5.40.0",
     "lightweight-charts": "^4.2.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "yahoo-finance2": "^2.11.0",
+    "@anthropic-ai/sdk": "^0.24.0",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
