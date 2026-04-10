@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import yahooFinance from 'yahoo-finance2'
+import yf from '@/lib/yahoo'
 import { cacheGet, cacheSet } from '@/lib/cache'
 
 const INDEX_MAP: Record<string, { symbol: string; name: string }> = {
@@ -21,7 +21,7 @@ export async function GET() {
 
   for (const [code, { symbol, name }] of Object.entries(INDEX_MAP)) {
     try {
-      const quote = await yahooFinance.quote(symbol)
+      const quote = await yf.quote(symbol)
       if (!quote.regularMarketPrice) continue
 
       data.push({

@@ -30,8 +30,8 @@ export function SearchResults() {
         name: item.name,
         exchange: item.exchange,
         groupName: '기본',
-        currentPrice: item.current_price,
-        changePct: item.change_pct,
+        currentPrice: item.currentPrice,
+        changePct: item.changePct,
         sentiment: null,
         sentimentScore: null,
         lastAnalysis: null,
@@ -53,7 +53,7 @@ export function SearchResults() {
     >
       {searchResults.map((item) => {
         const market = item.exchange?.startsWith('KO') ? 'KR' : 'US'
-        const colorClass = getChangeColor(item.change_pct, market)
+        const colorClass = getChangeColor(item.changePct, market)
         const alreadyAdded = inPortfolioTickers.has(item.ticker)
 
         return (
@@ -69,8 +69,8 @@ export function SearchResults() {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-semibold">{formatPrice(item.current_price, market)}</p>
-                <p className={`text-xs ${colorClass}`}>{formatChangePct(item.change_pct)}</p>
+                <p className="text-sm font-semibold">{formatPrice(item.currentPrice, market)}</p>
+                <p className={`text-xs ${colorClass}`}>{formatChangePct(item.changePct)}</p>
               </div>
               <button
                 onClick={() => handleAdd(item)}

@@ -31,7 +31,7 @@ export const api = {
 
   // 포트폴리오는 클라이언트(Zustand persist)에서 관리 — 서버 불필요
   getPortfolio: () => Promise.resolve({ data: [], meta: { total: 0 } }),
-  addToPortfolio: () => Promise.resolve({ data: {} }),
-  removeFromPortfolio: () => Promise.resolve(undefined as any),
-  updateGroup: () => Promise.resolve({ data: {} }),
+  addToPortfolio: (_body: any) => Promise.resolve({ data: {} }),
+  removeFromPortfolio: (_ticker: string) => Promise.resolve(undefined as any),
+  updateGroup: (_ticker: string, _group: string) => Promise.resolve({ data: {} }),
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import yahooFinance from 'yahoo-finance2'
+import yf from '@/lib/yahoo'
 import { cacheGet, cacheSet } from '@/lib/cache'
 
 export async function GET(req: NextRequest) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (cached) return NextResponse.json(cached)
 
     try {
-      const results = await yahooFinance.search(q, { quotesCount: 10, newsCount: 0 })
+      const results = await yf.search(q, { quotesCount: 10, newsCount: 0 })
       const data = (results.quotes ?? [])
         .filter((r: any) => r.isYahooFinance)
         .slice(0, 10)
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     if (cached) return NextResponse.json(cached)
 
     try {
-      const hist = await yahooFinance.chart(yf_ticker, {
+      const hist = await yf.chart(yf_ticker, {
         period1: periodMap[period] === '1d' ? new Date(Date.now() - 86400000).toISOString().split('T')[0] : undefined,
         period2: new Date().toISOString().split('T')[0],
         interval: (intervalMap[period] ?? '1d') as any,
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     if (cached) return NextResponse.json(cached)
 
     try {
-      const quote = await yahooFinance.quote(yf_ticker)
+      const quote = await yf.quote(yf_ticker)
       const result = {
         data: {
           ticker,

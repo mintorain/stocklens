@@ -34,12 +34,12 @@ export function StockChartSection({ ticker, market }: StockChartSectionProps) {
   useEffect(() => {
     if (!chartRef.current || loading || candles.length === 0) return
 
-    import('lightweight-charts').then(({ createChart, CandlestickSeries }) => {
+    import('lightweight-charts').then((lc) => {
       if (tvChartRef.current) {
         tvChartRef.current.remove()
       }
 
-      const chart = createChart(chartRef.current!, {
+      const chart = lc.createChart(chartRef.current!, {
         width: chartRef.current!.clientWidth,
         height: 280,
         layout: { background: { color: 'transparent' }, textColor: '#888' },
@@ -47,7 +47,7 @@ export function StockChartSection({ ticker, market }: StockChartSectionProps) {
         timeScale: { borderColor: '#e0e0e0' },
       })
 
-      const series = chart.addSeries(CandlestickSeries, {
+      const series = chart.addCandlestickSeries({
         upColor: '#ef4444',
         downColor: '#3b82f6',
         borderVisible: false,
