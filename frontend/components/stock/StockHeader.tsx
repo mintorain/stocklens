@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { formatChangePct, formatLargeNumber, formatPrice, getChangeColor } from '@/lib/utils'
+
+const REFRESH_INTERVAL = 30_000
 
 interface StockHeaderProps {
   ticker: string
@@ -12,13 +14,23 @@ interface StockHeaderProps {
 export function StockHeader({ ticker, market }: StockHeaderProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState('')
+  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await api.getStock(ticker, market)
+      setData(res.data)
+      setLastUpdate(new Date().toLocaleTimeString('ko-KR'))
+    } catch { /* 다음 주기에 재시도 */ }
+    setLoading(false)
+  }, [ticker, market])
 
   useEffect(() => {
-    api.getStock(ticker, market)
-      .then((res) => setData(res.data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [ticker, market])
+    fetchData()
+    intervalRef.current = setInterval(fetchData, REFRESH_INTERVAL)
+    return () => clearInterval(intervalRef.current)
+  }, [fetchData])
 
   if (loading) {
     return <div className="h-24 animate-pulse bg-muted rounded-xl" aria-label="종목 정보 로딩 중" />
@@ -33,7 +45,15 @@ export function StockHeader({ ticker, market }: StockHeaderProps) {
     <header className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">{data.name ?? ticker}</h1>
-        <p className="text-sm text-muted-foreground">{ticker} · {data.exchange ?? ''}</p>
+        <p className="text-sm text-muted-foreground">
+          {ticker} · {data.exchange ?? ''}
+          {lastUpdate && (
+            <span className="ml-2">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse mr-1" aria-hidden="true" />
+              {lastUpdate}
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="flex items-baseline gap-3">

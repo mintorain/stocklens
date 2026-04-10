@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import yf from '@/lib/yahoo'
+import { isKisAvailable, getDomesticStockPrice, getOverseasStockPrice } from '@/lib/kis'
 import { cacheGet, cacheSet } from '@/lib/cache'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const ticker = searchParams.get('ticker')
   const market = searchParams.get('market') ?? 'KR'
   const action = searchParams.get('action') ?? 'detail'
+  const useKis = isKisAvailable()
 
-  // 종목 검색
+  // ─── 종목 검색 ───
   if (action === 'search') {
     const q = searchParams.get('q') ?? ''
     if (q.length < 2) {
@@ -34,26 +38,26 @@ export async function GET(req: NextRequest) {
         }))
 
       const response = { data, meta: { total: data.length, query: q } }
-      cacheSet(cacheKey, response, 5 * 60 * 1000) // 5분
+      cacheSet(cacheKey, response, 5 * 60 * 1000)
       return NextResponse.json(response)
     } catch {
       return NextResponse.json({ data: [], meta: { total: 0, query: q } })
     }
   }
 
-  // 주가 차트
+  // ─── 주가 차트 ───
   if (action === 'price' && ticker) {
     const period = searchParams.get('period') ?? '1m'
     const periodMap: Record<string, string> = { '1d': '1d', '1w': '5d', '1m': '1mo', '3m': '3mo' }
     const intervalMap: Record<string, string> = { '1d': '5m', '1w': '1h', '1m': '1d', '3m': '1d' }
-    const yf_ticker = market === 'US' ? ticker : `${ticker}.KS`
+    const yfTicker = market === 'US' ? ticker : `${ticker}.KS`
 
     const cacheKey = `chart:${ticker}:${period}`
     const cached = cacheGet(cacheKey)
     if (cached) return NextResponse.json(cached)
 
     try {
-      const hist = await yf.chart(yf_ticker, {
+      const hist = await yf.chart(yfTicker, {
         period1: periodMap[period] === '1d' ? new Date(Date.now() - 86400000).toISOString().split('T')[0] : undefined,
         period2: new Date().toISOString().split('T')[0],
         interval: (intervalMap[period] ?? '1d') as any,
@@ -69,28 +73,39 @@ export async function GET(req: NextRequest) {
       }))
 
       const result = { data: { ticker, period, candles } }
-      cacheSet(cacheKey, result, 60 * 60 * 1000) // 1시간
+      cacheSet(cacheKey, result, 60 * 60 * 1000)
       return NextResponse.json(result)
     } catch {
       return NextResponse.json({ data: { ticker, period, candles: [] } })
     }
   }
 
-  // 종목 상세
+  // ─── 종목 상세 (KIS 우선 → Yahoo fallback) ───
   if (ticker) {
-    const yf_ticker = market === 'US' ? ticker : `${ticker}.KS`
-    const cacheKey = `price:${ticker}`
-    const cached = cacheGet(cacheKey)
-    if (cached) return NextResponse.json(cached)
-
     try {
-      const quote = await yf.quote(yf_ticker)
+      // KIS 실시간 시세 시도
+      if (useKis) {
+        const kisData = market === 'KR'
+          ? await getDomesticStockPrice(ticker)
+          : await getOverseasStockPrice(ticker)
+
+        if (kisData) {
+          return NextResponse.json({ data: kisData, meta: { source: 'KIS' } })
+        }
+      }
+
+      // Yahoo Finance fallback
+      const yfTicker = market === 'US' ? ticker : `${ticker}.KS`
+      const cacheKey = `price:${ticker}`
+      const cached = cacheGet(cacheKey)
+      if (cached) return NextResponse.json(cached)
+
+      const quote = await yf.quote(yfTicker)
       const result = {
         data: {
-          ticker,
+          ticker, market,
           name: quote.shortName ?? quote.longName ?? ticker,
           exchange: quote.fullExchangeName ?? '',
-          market,
           current_price: quote.regularMarketPrice ?? 0,
           open: quote.regularMarketOpen ?? 0,
           high: quote.regularMarketDayHigh ?? 0,
@@ -104,7 +119,9 @@ export async function GET(req: NextRequest) {
           eps: quote.epsTrailingTwelveMonths ?? null,
           week52_high: quote.fiftyTwoWeekHigh ?? null,
           week52_low: quote.fiftyTwoWeekLow ?? null,
+          updated_at: new Date().toISOString(),
         },
+        meta: { source: 'Yahoo' },
       }
       cacheSet(cacheKey, result, 15 * 60 * 1000)
       return NextResponse.json(result)
